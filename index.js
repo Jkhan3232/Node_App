@@ -25,7 +25,7 @@ app.use("/api/task", taskrouter);
 
 // connect to database
 const connectToDatabase = require("./Database/Connect");
-connectToDatabase();
+connectToDatabase(process.env.MONGODB_URI);
 
 
 //For Testing
