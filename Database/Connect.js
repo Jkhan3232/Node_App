@@ -1,19 +1,4 @@
-// const mongoose = require("mongoose");
 
-// const connectToDatabase = async (uri) => {
-//   try {
-//     const db = await mongoose.connect(uri, {
-//       useNewUrlParser: true,
-//       useUnifiedTopology: true,
-//     });
-
-//     console.log(`Connection Successfully... ${db}`);
-//   } catch (error) {
-//     console.error("Error connecting to the database:", error);
-//   }
-// };
-
-// module.exports = connectToDatabase(process.env.MO);
 const mongoose = require("mongoose");
 
 const connectToDatabase = async (atlasURI) => {
