@@ -1,4 +1,6 @@
 const jwt = require('jsonwebtoken');
+const bcrypt = require("bcrypt")
+const nodemailer = require("nodemailer");
 
 exports.setCookies = (user, res, message, statusCode = 200) => {
     try {
@@ -28,3 +30,25 @@ exports.setCookies = (user, res, message, statusCode = 200) => {
     }
 };
 
+
+// Function to hash a password using bcrypt
+exports.hashPassword = async (password) => {
+    const saltRounds = 12;
+    const salt = await bcrypt.genSalt(saltRounds);
+    return bcrypt.hash(password, salt);
+};
+
+//Define Transpoter for Set SMTP Service
+exports.transporter = nodemailer.createTransport({
+    host: process.env.HOST_NAME,
+    // port: process.env.Port,
+    secure: false,
+    auth: {
+        user: process.env.EMAIL,
+        pass: process.env.PASSWORD,
+    },
+});
+//OTP Genrate Function
+exports.otpGenerator = () => {
+    return Math.floor(Math.random() * 9000) + 1000;
+}

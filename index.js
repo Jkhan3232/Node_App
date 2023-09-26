@@ -1,7 +1,7 @@
 require('dotenv').config()
 const express = require("express");
 const app = express();
-const port = 2300;
+const port = process.env.PORT || 2300;
 const body_parser = require("body-parser")
 const cookieParser = require('cookie-parser');
 const taskrouter = require("./Routes/tasks");
