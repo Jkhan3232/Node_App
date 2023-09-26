@@ -1,37 +1,20 @@
 const Student = require("../Models/Students")
-const { setCookies } = require("../Utils/features")
-const bcrypt = require("bcrypt")
+const { setCookies, hashPassword, transporter, otpGenerator } = require("../Utils/features")
 const zxcvbn = require('zxcvbn');
-const nodemailer = require("nodemailer");
 
-//OTP Genrate Function
-const otpGenerator = () => {
-  return Math.floor(Math.random() * 9000) + 1000;
-}
-//Define Transpoter for Set SMTP Service
-const transporter = nodemailer.createTransport({
-  host: process.env.HOST_NAME,
-  port: process.env.PORT,
-  secure: false,
-  auth: {
-    user: process.env.EMAIL,
-    pass: process.env.PASSWORD,
-  },
-});
-
-// Register endpoint
-exports.addUser = async (req, res,) => {
+// Register endpoin
+exports.addUser = async (req, res) => {
   try {
     // Extract user data from request body
     const { name, email, phone, password } = req.body;
 
-    // Check if user exists
-    const existingUser = await Student.findOne({ email });
-    if (existingUser) {
+    // Check if user already exists
+    const userExists = await Student.findOne({ email });
+    if (userExists) {
       return res.status(400).json({
         success: false,
-        massage: "User Allready Exist"
-      })
+        message: "User already exists"
+      });
     }
 
     // Check password strength
@@ -39,30 +22,29 @@ exports.addUser = async (req, res,) => {
     if (passwordStrength.score < 3) {
       return res.status(400).json({
         success: false,
-        massage: "Weak Password"
-      })
+        message: "Weak Password"
+      });
     }
 
     // Hash password
-    const saltRounds = 12;
-    const salt = await bcrypt.genSalt(saltRounds);
-    const hashedPassword = await bcrypt.hash(password, salt);
+    const hashedpassword = await hashPassword(password);
 
-    // Create new user instance
+    // Create a new user instance
     const newUser = new Student({
       name,
       email,
       phone,
-      password: hashedPassword,
+      password: hashedpassword,
     });
 
-    // Save user to database
+    // Save the user to the database
     await newUser.save();
-    setCookies(newUser, res, "Registers user successfully", 201)
 
-  }
-  catch (error) {
-    console.error("Error during login:", error);
+    // Generate JWT token and set cookies
+    setCookies(newUser, res, "Registered user successfully", 201);
+
+  } catch (error) {
+    console.error("Error during user registration:", error);
     return res.status(500).json({
       success: false,
       message: "Internal server error"
@@ -74,31 +56,41 @@ exports.addUser = async (req, res,) => {
 // Function to send OTP to the user's email
 const sendOTP = async (email, otp) => {
   try {
+    // Ensure valid email address
+    if (!email || !otp) {
+      throw new Error("Email and OTP are required.");
+    }
+
     const mailOptions = {
-      from: "<gshankhan4545@gmail.com>",
+      from: "gshankhan4545@gmail.com",
       to: email,
       subject: "Email OTP Verification",
       text: `Your OTP is: ${otp}`,
     };
-    await transporter.sendMail(mailOptions);
-  }
 
-  catch (error) {
-    console.error("Error during login:", error);
-    return res.status(500).json({
+    await transporter.sendMail(mailOptions);
+
+    return {
+      success: true,
+      message: "OTP sent successfully"
+    };
+
+  } catch (error) {
+    console.error("Error sending OTP:", error);
+    return {
       success: false,
       message: "Internal server error"
-    });
+    };
   }
-
 };
+
 
 // Login endpoint
 exports.login = async (req, res) => {
   try {
-
     // Get email from request body
     const { email } = req.body;
+    // console.log(email);
 
     // Find user by email
     const user = await Student.findOne({ email });
@@ -107,12 +99,13 @@ exports.login = async (req, res) => {
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: "Invalid email or password"
+        message: "User does not exist. Please register first."
       });
     }
 
     // Generate OTP
     const otp = otpGenerator();
+
     // Save OTP to user object
     user.otp = otp;
     await user.save();
@@ -124,17 +117,16 @@ exports.login = async (req, res) => {
       success: true,
       message: "OTP sent to your email"
     });
-  }
 
-  catch (error) {
+  } catch (error) {
     console.error("Error during login:", error);
     return res.status(500).json({
       success: false,
       message: "Internal server error"
     });
   }
-
 };
+
 
 //Verify Otp
 exports.verifyOTP = async (req, res) => {
@@ -145,16 +137,8 @@ exports.verifyOTP = async (req, res) => {
     // Find user by email
     const user = await Student.findOne({ email });
 
-    // Check if user exists
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid email or OTP"
-      });
-    }
-
-    // Check if OTP matches
-    if (user.otp !== otp) {
+    // Check if user exists or OTP doesn't match
+    if (!user || user.otp !== otp) {
       return res.status(401).json({
         success: false,
         message: "Invalid email or OTP"
@@ -164,19 +148,20 @@ exports.verifyOTP = async (req, res) => {
     // Clear OTP from user object
     user.otp = null;
     await user.save();
+
     // Generate JWT token and set cookies
-    setCookies(user, res, "login successfully..", 200)
+    setCookies(user, res, "Login successful.", 200);
   }
 
   catch (error) {
     console.error("Error during OTP verification:", error);
     return res.status(500).json({
-      success: false, message:
-        "Internal server error"
+      success: false,
+      message: "Internal server error"
     });
   }
-
 };
+
 
 exports.getMe = (req, res) => {
   try {
