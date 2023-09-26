@@ -16,7 +16,6 @@ exports.isAuthenticated = async (req, res, next) => {
         if (!token) {
             return res.status(402).json({ message: "Please Login" });
         }
-
         // Verify the token
         const decoded = jwt.verify(token, process.env.SECRATE_KEY);
 

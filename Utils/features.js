@@ -27,3 +27,4 @@ exports.setCookies = (user, res, message, statusCode = 200) => {
         });
     }
 };
+
